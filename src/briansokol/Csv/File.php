@@ -55,7 +55,7 @@ class File implements \Iterator, \Countable {
 						if (!empty($this->headers) && count($this->headers) !== count($row)) {
 							throw new DataException("Row column count does not match header column count (Row ".($i+1).")");
 						}
-						if (($removeDupHeaders && $row->toArray() !== $this->headers->toArray()) || !$removeDupHeaders) {
+						if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
 							$this->data[] = new Row($row, $this->headers);
 						}
 					}
@@ -74,7 +74,7 @@ class File implements \Iterator, \Countable {
 							if (!empty($this->headers) && count($this->headers) !== count($row)) {
 								throw new DataException("Row column count does not match header column count (Row ".($i+1).")");
 							}
-							if (($removeDupHeaders && $row->toArray() !== $this->headers->toArray()) || !$removeDupHeaders) {
+							if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
 								$this->data[] = new Row($row, $this->headers);
 							}
 						}

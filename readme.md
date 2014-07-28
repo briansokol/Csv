@@ -1,4 +1,4 @@
-briansokol\Csv
+Csv
 =========
 
 By Brian Sokol

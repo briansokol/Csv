@@ -4,41 +4,78 @@ namespace briansokol\Csv\File;
 
 use briansokol\Csv\Exception;
 
+/**
+ * This class represents a row of a CSV file.
+ *
+ * @package briansokol\Csv\File
+ * @author Brian Sokol <Brian.Sokol@gmail.com>
+ */
 class Row implements \Iterator, \Countable {
 
+	/**
+	 * @var int
+	 */
 	protected $position;
+	/**
+	 * @var array
+	 */
 	protected $data;
 
+	/**
+	 * Based on an array of data, an object will be constructed that represents a row of a CSV file.
+	 *
+	 * @param array $row Array of data containing the columns of the row.
+	 * @param array|null $header If not null, the row's header can also be stored in the row.
+	 *
+	 * @throws \briansokol\Csv\Exception\DataException if the count of columns in a row do not match the columns in the header.
+	 * @throws \briansokol\Csv\Exception\DataException if the given row data is not an array.
+	 * @throws \briansokol\Csv\Exception\DataException if the given header data is not an array.
+	 */
 	public function __construct($row, $header = null) {
 		if (is_array($row) && !empty($row)) {
 			$this->data = array_values($row);
 		} else {
-			throw new Exception\Data("Input must be a non-empty array");
+			throw new Exception\DataException("Input must be a non-empty array");
 		}
 		if (!is_null($header)) {
 			if (is_array($header)) {
 				if (count($header) == count($row)) {
 					$this->data = array_combine(array_values($header), $this->data);
 				} else {
-					throw new Exception\Data("Row column count does not match header column count");
+					throw new Exception\DataException("Row column count does not match header column count");
 				}
 			} else {
-				throw new Exception\Data("Supplied header must be an array");
+				throw new Exception\DataException("Supplied header must be an array");
 			}
 		}
 	}
 
+	/**
+	 * Returns the header row an array
+	 *
+	 * @return array
+	 */
 	public function getHeaderRow() {
 		return array_keys($this->data);
 	}
 
+	/**
+	 * Sets the header and value of a field at the given position.
+	 *
+	 * @param string $key The header name.
+	 * @param string $value The new value of the field.
+	 * @param int $position Column number to change.
+	 *
+	 * @throws \briansokol\Csv\Exception\DataException if the given position does not exist.
+	 * @throws \briansokol\Csv\Exception\DataException if given position is not an integer.
+	 */
 	public function setAtPosition($key, $value, $position) {
 		if (!is_int($position)) {
-			throw new Exception\Data("Position must be an integer");
+			throw new Exception\DataException("Position must be an integer");
 		}
 
 		if ($position > count($this->data) || $position < 0) {
-			throw new Exception\Data("Position is outside array bounds");
+			throw new Exception\DataException("Position is outside array bounds");
 		}
 
 		$header = array_keys($this->data);
@@ -61,6 +98,11 @@ class Row implements \Iterator, \Countable {
 		$this->data = array_combine($header, $values);
 	}
 
+	/**
+	 * Returns the row as an associative array.
+	 *
+	 * @return array
+	 */
 	public function toArray() {
 		return $this->data;
 	}
@@ -124,6 +166,12 @@ class Row implements \Iterator, \Countable {
 		return isset($values[$this->position]);
 	}
 
+	/**
+	 * Utility function to convert an array to a string representation.
+	 *
+	 * @param $array
+	 * @return string
+	 */
 	protected function arrayToString($array) {
 		if (is_array($array)) {
 			$outputArray = array_values($array);

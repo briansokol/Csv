@@ -2,6 +2,6 @@
 
 namespace briansokol\Csv\Exception;
 
-class Data extends \Exception {
+class IoException extends \Exception {
 
 }

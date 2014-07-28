@@ -231,7 +231,7 @@ class File implements \Iterator, \Countable {
 	public function exportCsv($filename = "php://output", $delimiter = ",", $enclosure = '"') {
 		if (($handle = fopen($filename, 'w')) !== FALSE) {
 			if (!empty($this->headers)) {
-				fputcsv($handle, $this->headers, $delimiter, $enclosure);
+				fputcsv($handle, $this->headers->toArray(), $delimiter, $enclosure);
 			}
 			foreach($this->data as $row) {
 				fputcsv($handle, $row->toArray(), $delimiter, $enclosure);

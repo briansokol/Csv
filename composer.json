@@ -1,6 +1,5 @@
 {
     "name": "briansokol/Csv",
-    "version": "0.1",
     "description": "Classes for handling CSV files in PHP 5.3+",
     "type": "library",
     "keywords": ["CSV"],

@@ -1,10 +1,15 @@
 <?php
 
 namespace briansokol\Csv;
+
 use briansokol\Csv\File\Row;
 use briansokol\Csv\File\Header;
-use briansokol\Csv\Exception\DataException;
-use briansokol\Csv\Exception\IoException;
+use briansokol\Csv\Exception\DataInputException;
+use briansokol\Csv\Exception\DataOutputException;
+use briansokol\Csv\Exception\InputTypeException;
+use briansokol\Csv\Exception\RowCountMismatchException;
+use briansokol\Csv\Exception\RowCountMismatchInterruptingException;
+use briansokol\Csv\Exception\RowDoesNotExistException;
 
 /**
  * This class represents a CSV file.
@@ -29,31 +34,60 @@ class File implements \Iterator, \Countable {
 
 
 	/**
-	 * Based on an initial data source, an object is constructed to represent the file.
-	 * Row objects will be created to store each row of data.
+	 * Creates a new CSV file object.
+	 */
+	function __construct() {
+		$this->position = 0;
+		$this->data = array();
+		$this->headers = null;
+	}
+
+	/**
+	 * Based on an initial data source, Row and Header objects are added to the File.
 	 *
 	 * @param string|array $initialData Either a string designating a file to import or an array of associative arrays.
 	 * @param bool $headers If true, the first row of the file will be used as the headers.
 	 * @param string $delimiter Delimiter between columns.
 	 * @param bool $removeDupHeaders If true, it will ignore additional lines that are identical to the header.
+	 * @param int $skipRows The number of rows from the top to skip before data is imported.
+	 * @param bool $stopOnError Determines whether the import will stop if a row cannot be imported.
 	 *
-	 * @throws DataException if the count of columns in a row do not match the columns in the header.
-	 * @throws IoException if the given initial data file does not exist of cannot be read.
+	 * @throws RowCountMismatchException after completion if the count of columns in one or more rows do not match the count of columns in the header.
+	 * @throws RowCountMismatchInterruptingException and cancels data import if the count of columns in a row does not match the count of columns in the header.
+	 * @throws DataInputException if the given initial data file does not exist of cannot be read.
 	 */
-	function __construct($initialData, $headers = true, $delimiter = ",", $removeDupHeaders = true) {
-		$this->position = 0;
-		$this->data = array();
-		$this->headers = null;
-
+	function setData($initialData, $headers = true, $delimiter = ",", $removeDupHeaders = true, $skipRows = 0, $stopOnError = false) {
 		if (is_array($initialData)) {
+			$this->position = 0;
+			$this->data = array();
+			$this->headers = null;
+			$errorLines = array();
 			$initialData = array_values($initialData);
 			foreach ($initialData as $i => $row) {
+				if ($i < $skipRows) {
+					continue;
+				}
 				if ($headers) {
 					if(empty($this->headers)) {
 						$this->headers = new Header($row);
 					} else {
 						if (!empty($this->headers) && count($this->headers) !== count($row)) {
-							throw new DataException("Row column count does not match header column count (Row ".($i+1).")");
+							$errorLines[] = $i+1;
+							if ($stopOnError) {
+								$this->position = 0;
+								$this->data = array();
+								$this->headers = null;
+								throw new RowCountMismatchInterruptingException(
+									"Row/header column count mismatch [" . implode(",", $errorLines) . "]"
+								);
+							} else {
+								while (count($row) > count($this->headers)) {
+									array_pop($row);
+								}
+								while (count($row) < count($this->headers)) {
+									$row[] = "";
+								}
+							}
 						}
 						if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
 							$this->data[] = new Row($row, $this->headers);
@@ -65,14 +99,36 @@ class File implements \Iterator, \Countable {
 			}
 		} else {
 			if (($handle = fopen($initialData, 'r')) !== FALSE) {
+				$this->position = 0;
+				$this->data = array();
+				$this->headers = null;
 				$i = 0;
-				while (($row = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
+				while (($row = fgetcsv($handle, 2048, $delimiter)) !== FALSE) {
+					if ($i < $skipRows) {
+						$i++;
+						continue;
+					}
 					if ($headers) {
 						if(empty($this->headers)) {
 							$this->headers = new Header($row);
 						} else {
 							if (!empty($this->headers) && count($this->headers) !== count($row)) {
-								throw new DataException("Row column count does not match header column count (Row ".($i+1).")");
+								$errorLines[] = $i+1;
+								if ($stopOnError) {
+									$this->position = 0;
+									$this->data = array();
+									$this->headers = null;
+									throw new RowCountMismatchInterruptingException(
+										"Row/header column count mismatch [" . implode(",", $errorLines) . "]"
+									);
+								} else {
+									while (count($row) > count($this->headers)) {
+										array_pop($row);
+									}
+									while (count($row) < count($this->headers)) {
+										$row[] = "";
+									}
+								}
 							}
 							if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
 								$this->data[] = new Row($row, $this->headers);
@@ -85,7 +141,12 @@ class File implements \Iterator, \Countable {
 				}
 				fclose($handle);
 			} else {
-				throw new IoException("File '$initialData' could not be opened for reading");
+				throw new DataInputException("File '$initialData' could not be opened for reading");
+			}
+			if (!$stopOnError && count($errorLines)) {
+				throw new RowCountMismatchException(
+					"Row/header column count mismatch [" . implode(",", $errorLines) . "]"
+				);
 			}
 		}
 	}
@@ -132,8 +193,8 @@ class File implements \Iterator, \Countable {
 	 *
 	 * @return $this
 	 *
-	 * @throws DataException if the count of columns in a row do not match the columns in the header.
-	 * @throws DataException if the input row is not an array or an object of type Row.
+	 * @throws RowCountMismatchException if the count of columns in a row do not match the columns in the header.
+	 * @throws InputTypeException if the input row is not an array or an object of type Row.
 	 */
 	public function addRow($row, $position = null) {
 		if ((is_array($row) && !empty($row)) || $row instanceof Row) {
@@ -160,10 +221,10 @@ class File implements \Iterator, \Countable {
 					$this->data[] = $row;
 				}
 			} else {
-				throw new DataException("Row column count does not match header column count");
+				throw new RowCountMismatchException("Row/header column count mismatch [".count($this->data)."]");
 			}
 		} else {
-			throw new DataException("Input must be a non-empty array or a Row object");
+			throw new InputTypeException("Input must be a non-empty array or a Row object");
 		}
 		return $this;
 	}
@@ -174,7 +235,7 @@ class File implements \Iterator, \Countable {
 	 * @param array $rows An array of arrays to add to the file.
 	 * @param null $position Optional position to insert row.
 	 *
-	 * @throws DataException if the input row is not an array of arrays or an array of objects of type \briansokol\Csv\File\Row.
+	 * @throws InputTypeException if the input row is not an array of arrays or an array of objects of type Row.
 	 */
 	public function addRows($rows, $position = null) {
 		if (is_array($rows)) {
@@ -182,7 +243,7 @@ class File implements \Iterator, \Countable {
 			$rows = array_values($rows);
 			foreach ($rows as $i => $row) {
 				if (!is_array($row) && !$row instanceof Row) {
-					throw new DataException("Input must be a non-empty array of arrays or an array of Row object (Row ".($i+1).")");
+					throw new InputTypeException("Input must be a non-empty array of arrays or an array of Row object (Row ".($i+1).")");
 				}
 				if (is_array($row)) {
 					$row = array_values($row);
@@ -199,23 +260,23 @@ class File implements \Iterator, \Countable {
 				$this->data = array_merge($this->data, $newRows);
 			}
 		} else {
-			throw new DataException("Input must be a non-empty array of arrays or an array of Row object");
+			throw new InputTypeException("Input must be a non-empty array of arrays or an array of Row object");
 		}
 	}
 
 	/**
 	 * Deletes the row at the given position.
 	 *
-	 * @param $position Index of row to delete.
+	 * @param $position int Index of row to delete.
 	 *
-	 * @throws DataException if the row at the given index does not exist.
+	 * @throws RowDoesNotExistException if the row at the given index does not exist.
 	 */
 	public function deleteRow($position) {
 		if (is_int($position) && isset($this->data[(int)$position])) {
 			unset($this->data[(int)$position]);
 			$this->data = array_values($this->data);
 		} else {
-			throw new DataException("Row does not exist (".$position.")");
+			throw new RowDoesNotExistException("Row does not exist (".$position.")");
 		}
 	}
 
@@ -226,7 +287,7 @@ class File implements \Iterator, \Countable {
 	 * @param string $delimiter Delimiter to use between columns.
 	 * @param string $enclosure Used to wrap fields that contain the delimiter character.
 	 *
-	 * @throws IoException if the given file cannot be written to.
+	 * @throws DataOutputException if the given file cannot be written to.
 	 */
 	public function exportCsv($filename = "php://output", $delimiter = ",", $enclosure = '"') {
 		if (($handle = fopen($filename, 'w')) !== FALSE) {
@@ -238,7 +299,7 @@ class File implements \Iterator, \Countable {
 			}
 			fclose($handle);
 		} else {
-			throw new IoException("File '$filename' could not be opened for writing");
+			throw new DataOutputException("File '$filename' could not be opened for writing");
 		}
 	}
 

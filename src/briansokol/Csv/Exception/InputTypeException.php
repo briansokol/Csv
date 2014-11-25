@@ -2,6 +2,6 @@
 
 namespace briansokol\Csv\Exception;
 
-class DataException extends \Exception {
+class InputTypeException extends \Exception {
 
 }

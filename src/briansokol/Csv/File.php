@@ -322,7 +322,7 @@ class File implements \Iterator, \Countable {
 	 * Returns count of rows.
 	 * Implements Countable interface
 	 *
-	 * @ignore
+	 * @return int The number of rows in the file.
 	 */
 	public function count() {
 		return count($this->data);

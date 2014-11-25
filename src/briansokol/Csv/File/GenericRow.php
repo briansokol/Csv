@@ -196,7 +196,7 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 	 * Returns count of rows.
 	 * Implements Countable interface
 	 *
-	 * @ignore
+	 * @return int The count of columns in the row.
 	 */
 	public function count() {
 		return count($this->data);

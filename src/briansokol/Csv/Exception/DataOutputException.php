@@ -2,6 +2,13 @@
 
 namespace briansokol\Csv\Exception;
 
+/**
+ * Exception thrown when data cannot be output.
+ *
+ * @package briansokol\Csv
+ * @subpackage briansokol\Csv\Exception
+ * @author Brian Sokol <Brian.Sokol@gmail.com>
+ */
 class DataOutputException extends \Exception {
 
 }

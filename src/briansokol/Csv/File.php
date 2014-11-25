@@ -35,6 +35,8 @@ class File implements \Iterator, \Countable {
 
 	/**
 	 * Creates a new CSV file object.
+	 *
+	 * @return File $this
 	 */
 	function __construct() {
 		$this->position = 0;
@@ -53,6 +55,8 @@ class File implements \Iterator, \Countable {
 	 * @param int $skipRows The number of rows from the top to skip before data is imported.
 	 * @param bool $stopOnError Determines whether the import will stop if a row cannot be imported.
 	 *
+	 * @return File $this
+	 *
 	 * @throws RowCountMismatchException after completion if the count of columns in one or more rows do not match the count of columns in the header.
 	 * @throws RowCountMismatchInterruptingException and cancels data import if the count of columns in a row does not match the count of columns in the header.
 	 * @throws DataInputException if the given initial data file does not exist of cannot be read.
@@ -70,7 +74,7 @@ class File implements \Iterator, \Countable {
 				}
 				if ($headers) {
 					if(empty($this->headers)) {
-						$this->headers = new Header($row);
+						$this->headers = Header::getInstance()->setData($row);
 					} else {
 						if (!empty($this->headers) && count($this->headers) !== count($row)) {
 							$errorLines[] = $i+1;
@@ -91,7 +95,7 @@ class File implements \Iterator, \Countable {
 							}
 						}
 						if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
-							$this->data[] = new Row($row, $this->headers);
+							$this->data[] = Row::getInstance()->setData($row, $this->headers);
 						}
 					}
 				} else {
@@ -111,7 +115,7 @@ class File implements \Iterator, \Countable {
 					}
 					if ($headers) {
 						if(empty($this->headers)) {
-							$this->headers = new Header($row);
+							$this->headers = Header::getInstance()->setData($row);
 						} else {
 							if (!empty($this->headers) && count($this->headers) !== count($row)) {
 								$errorLines[] = $i+1;
@@ -132,7 +136,7 @@ class File implements \Iterator, \Countable {
 								}
 							}
 							if (($removeDupHeaders && $row !== $this->headers->toArray()) || !$removeDupHeaders) {
-								$this->data[] = new Row($row, $this->headers);
+								$this->data[] = Row::getInstance()->setData($row, $this->headers);
 							}
 						}
 					} else {
@@ -150,6 +154,7 @@ class File implements \Iterator, \Countable {
 				);
 			}
 		}
+		return $this;
 	}
 
 	/**
@@ -178,7 +183,7 @@ class File implements \Iterator, \Countable {
 			if ($asArray) {
 				return array_keys($this->data);
 			} else {
-				return new Header(array_keys($this->data));
+				return Header::getInstance()->setData(array_keys($this->data));
 			}
 		} else {
 			return null;
@@ -192,7 +197,7 @@ class File implements \Iterator, \Countable {
 	 * @param Row|array $row The row to add.
 	 * @param null $position Optional position to insert row.
 	 *
-	 * @return $this
+	 * @return File $this
 	 *
 	 * @throws RowCountMismatchException if the count of columns in a row do not match the columns in the header.
 	 * @throws InputTypeException if the input row is not an array or an object of type Row.
@@ -204,9 +209,9 @@ class File implements \Iterator, \Countable {
 					$row = array_values($row);
 				}
 				if (!empty($this->headers)) {
-					$row = new Row($row, $this->headers);
+					$row = Row::getInstance()->setData($row, $this->headers);
 				} else {
-					$row = new Row($row);
+					$row = Row::getInstance()->setData($row);
 				}
 				if (!is_null($position) && is_int($position))  {
 					if ($position == 0) {
@@ -236,6 +241,8 @@ class File implements \Iterator, \Countable {
 	 * @param array $rows An array of arrays to add to the file.
 	 * @param null $position Optional position to insert row.
 	 *
+	 * @return File $this
+	 *
 	 * @throws InputTypeException if the input row is not an array of arrays or an array of objects of type Row.
 	 */
 	public function addRows($rows, $position = null) {
@@ -263,12 +270,15 @@ class File implements \Iterator, \Countable {
 		} else {
 			throw new InputTypeException("Input must be a non-empty array of arrays or an array of Row object");
 		}
+		return $this;
 	}
 
 	/**
 	 * Deletes the row at the given position.
 	 *
 	 * @param $position int Index of row to delete.
+	 *
+	 * @return File $this
 	 *
 	 * @throws RowDoesNotExistException if the row at the given index does not exist.
 	 */
@@ -279,6 +289,7 @@ class File implements \Iterator, \Countable {
 		} else {
 			throw new RowDoesNotExistException("Row does not exist (".$position.")");
 		}
+		return $this;
 	}
 
 	/**
@@ -287,6 +298,8 @@ class File implements \Iterator, \Countable {
 	 * @param string $filename Name of file to export text to. Defaults to standard PHP output.
 	 * @param string $delimiter Delimiter to use between columns.
 	 * @param string $enclosure Used to wrap fields that contain the delimiter character.
+	 *
+	 * @return File $this
 	 *
 	 * @throws DataOutputException if the given file cannot be written to.
 	 */
@@ -302,32 +315,76 @@ class File implements \Iterator, \Countable {
 		} else {
 			throw new DataOutputException("File '$filename' could not be opened for writing");
 		}
+		return $this;
 	}
-
+	
+	/**
+	 * Returns count of rows.
+	 * Implements Countable interface
+	 *
+	 * @ignore
+	 */
 	public function count() {
 		return count($this->data);
 	}
 
+	/**
+	 * Sets pointer back to first row.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function rewind() {
 		$this->position = 0;
 	}
 
+	/**
+	 * Returns value at current position of pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function current() {
 		return $this->data[$this->position];
 	}
-
+	
+	/**
+	 * Returns current position of pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function key() {
 		return $this->position;
 	}
 
+	/**
+	 * Increments pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function next() {
 		++$this->position;
 	}
 
+	/**
+	 * Indicates whether the pointer current points at valid data.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function valid() {
 		return isset($this->data[$this->position]);
 	}
 	
+	/**
+	 * Static factory to retreive an instance.
+	 * 
+	 * @return File $this
+	 * 
+	 * @static
+	 */
 	static public function getInstance() {
         return new static();
     }

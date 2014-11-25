@@ -12,24 +12,35 @@ require_once("GenericRow.php");
 /**
  * This class represents a row of a CSV file.
  *
- * @package briansokol\Csv\File
+ * @package briansokol\Csv
+ * @subpackage briansokol\Csv\File
  * @author Brian Sokol <Brian.Sokol@gmail.com>
  */
 class Row extends GenericRow {
 
 	/**
-	 * Based on an array of data, an object will be constructed that represents a row of a CSV file.
+	 * Creates a Row with no data.
+	 *
+	 # @return Header $this;
+	 */
+	public function __construct($row, $header = null) {
+		parent::__construct();
+		return $this;
+	}
+	
+	/**
+	 * Populates the Row with data.
 	 *
 	 * @param array $row Array of data containing the columns of the row.
 	 * @param array|Header|null $header If not null, the row's header will also be stored in the row.
+	 *
+	 * @return Row $this
 	 *
 	 * @throws RowCountMismatchException if the count of columns in a row do not match the columns in the header.
 	 * @throws InputTypeException if the given row data is not an array.
 	 * @throws InputTypeException if the given header data is not an array.
 	 */
-	public function __construct($row, $header = null) {
-		parent::__construct();
-
+	public function setData($row, $header = null) {
 		if (is_array($row) && !empty($row)) {
 			$this->data = array_values($row);
 		} else {
@@ -49,6 +60,7 @@ class Row extends GenericRow {
 				throw new InputTypeException("Supplied header must be an array or a Header object");
 			}
 		}
+		return $this;
 	}
 
 	/**
@@ -61,7 +73,7 @@ class Row extends GenericRow {
 		if ($asArray) {
 			return array_keys($this->data);
 		} else {
-			return new Header(array_keys($this->data));
+			return Header::getInstance()->setData(array_keys($this->data));
 		}
 	}
 }

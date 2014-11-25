@@ -8,7 +8,8 @@ use briansokol\Csv\Exception\InvalidIndexException;
  * This class represents a generic row of a CSV file.
  * Each row may optionally contain the header keys.
  *
- * @package briansokol\Csv\File
+ * @package briansokol\Csv
+ * @subpackage briansokol\Csv\File
  * @author Brian Sokol <Brian.Sokol@gmail.com>
  */
 class GenericRow implements \ArrayAccess, \Iterator, \Countable {
@@ -23,11 +24,14 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 	protected $data;
 
 	/**
-	 * Creates a generic row with no data.
+	 * Creates a GenericRow with no data.
+	 * 
+	 * return GenericRow $this
 	 */
 	public function __construct() {
 		$this->position = 0;
 		$this->data = array();
+		return $this;
 	}
 
 	/**
@@ -36,6 +40,8 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 	 * @param string $key The key name.
 	 * @param string $value The new value of the field.
 	 * @param int $position Column number to change.
+	 *
+	 * @return GenericRow $this
 	 *
 	 * @throws InvalidIndexException if the given position does not exist.
 	 * @throws InvalidIndexException if given position is not an integer.
@@ -67,6 +73,8 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 				array_slice($values, $position, count($value)-$position));
 		}
 		$this->data = array_combine($keys, $values);
+		
+		return $this;
 	}
 
 	/**
@@ -78,6 +86,12 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 		return $this->data;
 	}
 
+	/**
+	 * Sets array offset.
+	 * Implements ArrayAccess interface.
+	 *
+	 * @ignore
+	 */
 	public function offsetSet($offset, $value) {
 		if (is_null($offset)) {
 			$this->data[] = $value;
@@ -86,36 +100,84 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 		}
 	}
 
+	/**
+	 * Indicates if the given offset exists.
+	 * Implements ArrayAccess interface.
+	 *
+	 * @ignore
+	 */
 	public function offsetExists($offset) {
 		return isset($this->data[$offset]);
 	}
 
+	/**
+	 * Unsets value at given offset.
+	 * Implements ArrayAccess interface.
+	 *
+	 * @ignore
+	 */
 	public function offsetUnset($offset) {
 		unset($this->data[$offset]);
 	}
 
+	/**
+	 * Returns value at given offset.
+	 * Implements ArrayAccess interface.
+	 *
+	 * @ignore
+	 */
 	public function offsetGet($offset) {
 		return isset($this->data[$offset]) ? $this->data[$offset] : null;
 	}
-
+	
+	/**
+	 * Magic method to get the value of a key
+	 *
+	 * @param mixed $key key to retreive
+	 * @return mixed value of given key
+	 */
 	public function __get($key) {
 		if (isset($this->data[$key])) {
 			return $this->data[$key];
 		}
 	}
 
+	/**
+	 * Magic method to set the value of a key
+	 *
+	 * @param mixed $key key of value being set
+	 * @param mixed $value value being set
+	 *
+	 * @return boolean true if successful
+	 */
 	public function __set($key, $value) {
 		return $this->data[$key] = $value;
 	}
 
+	/**
+	 * Magic method to determine if a key exists
+	 *
+	 * @param mixed $key key to look up
+	 * @return boolean true if the key exists, false if not
+	 */
 	public function __isset($key) {
 		return isset($this->data[$key]) ? true : false;
 	}
 
+	/**
+	 * Magic method to unset a key
+	 *
+	 * @param mixed $key to unset
+	 */
 	public function __unset($key) {
 		unset($this->data[$key]);
 	}
 
+	/**
+	 * Magic method to create a string representation of the row
+	 *
+	 * @return string textual representaion of the row
+	 */
 	public function __toString() {
 		$outputArray = array();
 		foreach ($this->data as $value) {
@@ -130,28 +192,64 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 		return implode(",", $outputArray);
 	}
 
+	/**
+	 * Returns count of rows.
+	 * Implements Countable interface
+	 *
+	 * @ignore
+	 */
 	public function count() {
 		return count($this->data);
 	}
 
+	/**
+	 * Sets pointer back to first row.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function rewind() {
 		$this->position = 0;
 	}
 
+	/**
+	 * Returns value at current position of pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function current() {
 		$values = array_values($this->data);
 		return $values[$this->position];
 	}
 
+	/**
+	 * Returns current key at the pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function key() {
 		$keys = array_keys($this->data);
 		return $keys[$this->position];
 	}
 
+	/**
+	 * Increments pointer.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function next() {
 		++$this->position;
 	}
 
+	/**
+	 * Indicates whether the pointer current points at valid data.
+	 * Implements Iterator interface
+	 *
+	 * @ignore
+	 */
 	public function valid() {
 		$values = array_values($this->data);
 		return isset($values[$this->position]);
@@ -179,4 +277,15 @@ class GenericRow implements \ArrayAccess, \Iterator, \Countable {
 			return $output;
 		}
 	}
+	
+	/**
+	 * Static factory to retreive an instance.
+	 * 
+	 * @return GenericRow $this
+	 * 
+	 * @static
+	 */
+	static public function getInstance() {
+        return new static();
+    }
 }

@@ -40,6 +40,7 @@ class File implements \Iterator, \Countable {
 		$this->position = 0;
 		$this->data = array();
 		$this->headers = null;
+		return $this;
 	}
 
 	/**
@@ -326,4 +327,8 @@ class File implements \Iterator, \Countable {
 	public function valid() {
 		return isset($this->data[$this->position]);
 	}
+	
+	static public function getInstance() {
+        return new static();
+    }
 }

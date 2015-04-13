@@ -23,7 +23,7 @@ class Row extends GenericRow {
 	 *
 	 # @return Header $this;
 	 */
-	public function __construct($row, $header = null) {
+	public function __construct() {
 		parent::__construct();
 		return $this;
 	}
